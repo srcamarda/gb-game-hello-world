@@ -10,7 +10,7 @@
   Compression          : None.
   Counter              : None.
   Tile size            : 8 x 8
-  Tiles                : 0 to 14
+  Tiles                : 0 to 15
 
   Palette colors       : Included.
   SGB Palette          : None.
@@ -97,9 +97,5 @@
 #define SpritesCGBPal7c1 25368
 #define SpritesCGBPal7c2 19026
 #define SpritesCGBPal7c3 12684
-/* CGBpalette entries. */
-//extern unsigned char SpritesCGB[];
-/* Start of tile array. */
-//extern unsigned char Sprites[];
 
 /* End of SPRITES.H */

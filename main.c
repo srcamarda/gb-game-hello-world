@@ -7,6 +7,7 @@
 #include "world_tile_set_def.c"
 
 #define MAX_ASTEROIDS 4
+#define TOTAL_LIVES 5
 
 const int xMax = DEVICE_SCREEN_PX_WIDTH - 12;
 const int xMin = 20;
@@ -26,10 +27,10 @@ uint8_t asteroids[2][MAX_ASTEROIDS];
 uint8_t propAsteroid[3][MAX_ASTEROIDS];
 uint8_t world[2];
 uint8_t fire[2];
-uint8_t numLives = 5;
+uint8_t numLives = TOTAL_LIVES;
 uint8_t numAsteroids = 0;
 uint8_t spriteCount = 0;
-uint8_t auxCount = 0;
+uint8_t aux = 0;
 uint8_t spCountAst;
 uint8_t spCountTile;
 uint8_t currAsteroid;
@@ -42,6 +43,7 @@ uint8_t randTime;
 uint8_t spWorld;
 uint8_t spFire;
 uint8_t spExplosion;
+uint8_t spHearth[TOTAL_LIVES];
 
 int timeAsteroid = 0;
 int timeAsteroid2 = 0;
@@ -76,26 +78,28 @@ void main() {
 
 void init() {
     // Set background and sprite palettes
+    aux = 0;
     for (uint8_t i = 0; i < 8; i++) {
-        set_bkg_palette(i, 1, &world_tile_p[auxCount]);
-        set_sprite_palette(i, 1, &sprites_p[auxCount]);
-        auxCount += 4;
+        set_bkg_palette(i, 1, &world_tile_p[aux]);
+        set_sprite_palette(i, 1, &sprites_p[aux]);
+        aux += 4;
     }
 
     // Load the background and sprite tiles to vram
     set_bkg_data(0, 78, WorldTileSet);
-    set_sprite_data(0, 15, Sprites);
+    set_sprite_data(0, 16, Sprites);
 
     setBkgPalette(FullWidth, FullHeight, WorldMap_a);      // Set bkg palette
     set_bkg_tiles(0, 0, FullWidth, FullHeight, WorldMap);  // Set bkg tiles
 
     // Apply sprite palettes
-    set_sprite_prop(spriteCount, 1);  // Eart - Palette 1
     spWorld = spriteCount;
+    set_sprite_prop(spriteCount, 1);  // Earth - Palette 1
+    set_sprite_tile(spWorld, 0);      // Set tile
     spriteCount++;
 
-    set_sprite_prop(spriteCount, 2);  // Fire - Palette 2
     spFire = spriteCount;
+    set_sprite_prop(spriteCount, 2);  // Fire - Palette 2
     spriteCount++;
 
     while (spriteCount < MAX_ASTEROIDS + 2) {
@@ -103,9 +107,16 @@ void init() {
         spriteCount++;
     }
 
-    set_sprite_prop(spriteCount, 4);  // Explosion - Palette 4
     spExplosion = spriteCount;
+    set_sprite_prop(spriteCount, 4);  // Explosion - Palette 4
     spriteCount++;
+
+    for (uint8_t i = 0; i < numLives; i++) {
+        spHearth[i] = spriteCount;
+        set_sprite_prop(spriteCount, 2);   // Hearth - Palette 2
+        set_sprite_tile(spHearth[i], 15);  // Set tile
+        spriteCount++;
+    }
 
     DISPLAY_ON;  // Turn on the display
 
@@ -154,9 +165,15 @@ void helloStart() {
     world[0] = DEVICE_SCREEN_PX_WIDTH / 2;
     world[1] = DEVICE_SCREEN_PX_HEIGHT / 2;
 
-    // Set sprite and put on the starting location
-    set_sprite_tile(spWorld, 0);  // Earth
+    // Put world sprite on starting location
     move_sprite(spWorld, world[0], world[1]);
+
+    // Put hearth sprites on starting location
+    aux = 12;
+    for (uint8_t i = 0; i < numLives; i++) {
+        move_sprite(spHearth[i], aux, 20);
+        aux += 10;
+    }
 }
 
 void checkInput() {
@@ -538,7 +555,7 @@ void explosion() {
 void removeLives() {
     numLives--;
 
-    // Remove the hearth sprite
+    hide_sprite(spHearth[numLives]);  // Hide hearth sprite
 
     if (numLives == 0) {
         // End game

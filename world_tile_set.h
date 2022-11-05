@@ -22,7 +22,6 @@
 
 */
 
-
 /* Bank of tiles. */
 #define WorldTileSetBank 0
 
@@ -97,9 +96,5 @@
 #define WorldTileSetCGBPal7c1 23301
 #define WorldTileSetCGBPal7c2 12709
 #define WorldTileSetCGBPal7c3 0
-/* CGBpalette entries. */
-//extern unsigned char WorldTileSetCGB[];
-/* Start of tile array. */
-//extern unsigned char WorldTileSet[];
 
 /* End of WORLD_TILE_SET.H */
