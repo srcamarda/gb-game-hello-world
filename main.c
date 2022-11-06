@@ -43,7 +43,7 @@ uint8_t randTime;
 uint8_t spWorld;
 uint8_t spFire;
 uint8_t spExplosion;
-uint8_t spHearth[TOTAL_LIVES];
+uint8_t spHeart[TOTAL_LIVES];
 uint8_t spAsteroid[MAX_ASTEROIDS];
 
 int timeAsteroid = 0;
@@ -116,11 +116,11 @@ void init() {
     set_sprite_prop(spriteCount, 4);
     spriteCount++;
 
-    // Set hearth palette and tile
+    // Set heart palette and tile
     for (uint8_t i = 0; i < numLives; i++) {
-        spHearth[i] = spriteCount;
-        set_sprite_prop(spriteCount, 2);   // Hearth - Palette 2
-        set_sprite_tile(spHearth[i], 15);  // Set tile
+        spHeart[i] = spriteCount;
+        set_sprite_prop(spriteCount, 2);  // Heart - Palette 2
+        set_sprite_tile(spHeart[i], 15);  // Set tile
         spriteCount++;
     }
 
@@ -145,6 +145,7 @@ void helloStart() {
     // Set start screen palette and tiles
     setBkgPalette(FullWidth, FullHeight, WorldMap_a);      // Set bkg palette
     set_bkg_tiles(0, 0, FullWidth, FullHeight, WorldMap);  // Set bkg tiles
+    move_bkg(0, 0);                                        // Move background to the 0x 0y position
 
     // Set variable to wait on start screen
     hello = TRUE;
@@ -186,10 +187,10 @@ void helloTrans() {
     // Put world sprite on starting location
     move_sprite(spWorld, world[0], world[1]);
 
-    // Put hearth sprites on starting location
+    // Put heart sprites on starting location
     aux = 12;
     for (uint8_t i = 0; i < numLives; i++) {
-        move_sprite(spHearth[i], aux, 20);
+        move_sprite(spHeart[i], aux, 20);
         aux += 10;
     }
 }
@@ -202,6 +203,7 @@ void gameOver() {
     // Hide sprites
     hide_sprite(spWorld);
     hide_sprite(spFire);
+
     for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
         hide_sprite(spAsteroid[i]);
     }
@@ -590,7 +592,7 @@ void explosion() {
 void removeLives() {
     numLives--;
 
-    hide_sprite(spHearth[numLives]);  // Hide hearth sprite
+    hide_sprite(spHeart[numLives]);  // Hide heart sprite
 
     if (numLives == 0) {
         gameOver();
