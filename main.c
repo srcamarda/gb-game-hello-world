@@ -44,6 +44,7 @@ uint8_t spWorld;
 uint8_t spFire;
 uint8_t spExplosion;
 uint8_t spHearth[TOTAL_LIVES];
+uint8_t spAsteroid[MAX_ASTEROIDS];
 
 int timeAsteroid = 0;
 int timeAsteroid2 = 0;
@@ -52,6 +53,8 @@ int valPosAsteroid;
 void init();
 void updateSwitches();
 void helloStart();
+void helloTrans();
+void gameOver();
 void checkInput();
 void spriteMove();
 void asteroidControl();
@@ -59,6 +62,7 @@ void asteroidMove();
 void bgMove();
 void explosion();
 void removeLives();
+void resetVariables();
 void setBkgPalette(uint8_t, uint8_t, unsigned char[]);
 BOOLEAN collisionCheck(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
 
@@ -77,7 +81,7 @@ void main() {
 }
 
 void init() {
-    // Set background and sprite palettes
+    // Load background and sprite palettes
     aux = 0;
     for (uint8_t i = 0; i < 8; i++) {
         set_bkg_palette(i, 1, &world_tile_p[aux]);
@@ -85,32 +89,34 @@ void init() {
         aux += 4;
     }
 
-    // Load the background and sprite tiles to vram
+    // Load background and sprite tiles to vram
     set_bkg_data(0, 78, WorldTileSet);
     set_sprite_data(0, 16, Sprites);
 
-    setBkgPalette(FullWidth, FullHeight, WorldMap_a);      // Set bkg palette
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, WorldMap);  // Set bkg tiles
-
-    // Apply sprite palettes
+    // Set world palette and tile
     spWorld = spriteCount;
-    set_sprite_prop(spriteCount, 1);  // Earth - Palette 1
-    set_sprite_tile(spWorld, 0);      // Set tile
+    set_sprite_prop(spriteCount, 1);
+    set_sprite_tile(spWorld, 0);
     spriteCount++;
 
+    // Set fire palette
     spFire = spriteCount;
-    set_sprite_prop(spriteCount, 2);  // Fire - Palette 2
+    set_sprite_prop(spriteCount, 2);
     spriteCount++;
 
-    while (spriteCount < MAX_ASTEROIDS + 2) {
-        set_sprite_prop(spriteCount, 3);  // Asteroids - Palette 3
+    // Set asteroids palette
+    for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
+        spAsteroid[i] = spriteCount;
+        set_sprite_prop(spriteCount, 3);
         spriteCount++;
     }
 
+    // Set explosion palette
     spExplosion = spriteCount;
-    set_sprite_prop(spriteCount, 4);  // Explosion - Palette 4
+    set_sprite_prop(spriteCount, 4);
     spriteCount++;
 
+    // Set hearth palette and tile
     for (uint8_t i = 0; i < numLives; i++) {
         spHearth[i] = spriteCount;
         set_sprite_prop(spriteCount, 2);   // Hearth - Palette 2
@@ -125,6 +131,8 @@ void init() {
     NR50_REG = 0x77;  // Increase the volume to its max
 
     initrand(sys_time);  // Start randon seed
+
+    helloStart();  // Call start screen
 }
 
 void updateSwitches() {
@@ -134,6 +142,16 @@ void updateSwitches() {
 }
 
 void helloStart() {
+    // Set start screen palette and tiles
+    setBkgPalette(FullWidth, FullHeight, WorldMap_a);      // Set bkg palette
+    set_bkg_tiles(0, 0, FullWidth, FullHeight, WorldMap);  // Set bkg tiles
+
+    // Set variable to wait on start screen
+    hello = TRUE;
+}
+
+// TO-DO: Add some dialog on the start
+void helloTrans() {
     // Move bg to the right
     for (uint8_t i = 0; i < 15; i++) {
         delay(30);
@@ -176,11 +194,27 @@ void helloStart() {
     }
 }
 
+void gameOver() {
+    // To-DO: Game-over screen
+
+    // Reset control variables
+    resetVariables();
+    // Hide sprites
+    hide_sprite(spWorld);
+    hide_sprite(spFire);
+    for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
+        hide_sprite(spAsteroid[i]);
+    }
+
+    // Call start screen
+    helloStart();
+}
+
 void checkInput() {
     // If on start screen, only check for start button
     if (hello) {
         waitpad(J_START);
-        helloStart();
+        helloTrans();
     }
 
     // Current tile state of fire sprite
@@ -389,8 +423,8 @@ void asteroidControl() {
                     break;
             }
 
-            spCountAst = currAsteroid + 2;                // Offsets sprite to consider already used ones
-            spCountTile = propAsteroid[2][currAsteroid];  // Determines the correct position tile
+            spCountAst = spAsteroid[currAsteroid];        // Determine asteroid sprite
+            spCountTile = propAsteroid[2][currAsteroid];  // Determines the position tile
             set_sprite_tile(spCountAst, spCountTile);     // Set asteroid sprite
 
             if (resetAsteroid) {
@@ -415,9 +449,10 @@ void asteroidControl() {
     }
 }
 
+// TO-DO: Add velocity control?
 void asteroidMove() {
     for (uint8_t i = 0; i < numAsteroids; i++) {
-        spCountAst = i + 2;
+        spCountAst = spAsteroid[i];
         move_sprite(spCountAst, asteroids[0][i], asteroids[1][i]);
 
         // If there is a colision between the asteroid and the player
@@ -558,8 +593,22 @@ void removeLives() {
     hide_sprite(spHearth[numLives]);  // Hide hearth sprite
 
     if (numLives == 0) {
-        // End game
+        gameOver();
     }
+}
+
+void resetVariables() {
+    numLives = TOTAL_LIVES;
+    numAsteroids = 0;
+    timeAsteroid = 0;
+    timeAsteroid2 = 0;
+    aux = 0;
+}
+
+void setBkgPalette(uint8_t x, uint8_t y, unsigned char map[]) {
+    VBK_REG = VBK_ATTRIBUTES;        // Select VRAM bank 1
+    set_bkg_tiles(0, 0, x, y, map);  // Set bkg atributes
+    VBK_REG = VBK_TILES;             // Swittch back to VRAM bank 0
 }
 
 BOOLEAN collisionCheck(uint8_t x1, uint8_t y1, uint8_t w1, uint8_t h1, uint8_t x2, uint8_t y2, uint8_t w2, uint8_t h2) {
@@ -568,10 +617,4 @@ BOOLEAN collisionCheck(uint8_t x1, uint8_t y1, uint8_t w1, uint8_t h1, uint8_t x
     } else {
         return FALSE;
     }
-}
-
-void setBkgPalette(uint8_t x, uint8_t y, unsigned char map[]) {
-    VBK_REG = VBK_ATTRIBUTES;        // Select VRAM bank 1
-    set_bkg_tiles(0, 0, x, y, map);  // Set bkg atributes
-    VBK_REG = VBK_TILES;             // Swittch back to VRAM bank 0
 }
