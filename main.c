@@ -3,18 +3,19 @@
 #include <rand.h>
 
 #include "background.c"
-#include "sprites_def.c"
-#include "world_tile_set_def.c"
+#include "background_a.c"
+#include "main_tile_set_p.c"
+#include "sprites_p.c"
+#include "windows.c"
 
 #define MAX_ASTEROIDS 4
 #define TOTAL_LIVES 5
 
-const int xMax = DEVICE_SCREEN_PX_WIDTH - 12;
-const int xMin = 20;
-const int yMax = DEVICE_SCREEN_PX_HEIGHT - 4;
-const int yMin = 28;
+const int xMax = DEVICE_SCREEN_PX_WIDTH - 4;
+const int xMin = 12;
+const int yMax = DEVICE_SCREEN_PX_HEIGHT + 4;
+const int yMin = 20;
 
-BOOLEAN hello = TRUE;
 BOOLEAN hideFire = TRUE;
 BOOLEAN stopBG = TRUE;
 BOOLEAN xMove = TRUE;
@@ -50,10 +51,15 @@ int timeAsteroid = 0;
 int timeAsteroid2 = 0;
 int valPosAsteroid;
 
+int idxBkgTiles = 72;
+int idxWinTiles = 10;
+int idxSprites = 16;
+
 void init();
 void updateSwitches();
+void helloPrep();
 void helloStart();
-void helloTrans();
+void bkgTransition(uint8_t);
 void gameOver();
 void checkInput();
 void spriteMove();
@@ -63,7 +69,8 @@ void bgMove();
 void explosion();
 void removeLives();
 void resetVariables();
-void setBkgPalette(uint8_t, uint8_t, unsigned char[]);
+void setBkgPalette(uint8_t, uint8_t, uint8_t, uint8_t, unsigned char[]);
+void performant_delay(uint8_t);
 BOOLEAN collisionCheck(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
 
 void main() {
@@ -84,14 +91,35 @@ void init() {
     // Load background and sprite palettes
     aux = 0;
     for (uint8_t i = 0; i < 8; i++) {
-        set_bkg_palette(i, 1, &world_tile_p[aux]);
+        set_bkg_palette(i, 1, &main_tile_set_p[aux]);
         set_sprite_palette(i, 1, &sprites_p[aux]);
         aux += 4;
     }
 
-    // Load background and sprite tiles to vram
-    set_bkg_data(0, 78, WorldTileSet);
-    set_sprite_data(0, 16, Sprites);
+    // Load background, windows and sprite tiles to vram
+    set_bkg_data(0, idxBkgTiles, MainTileSet);
+    set_win_data(idxBkgTiles, idxWinTiles, Windows);
+    set_sprite_data(0, idxSprites, Sprites);
+
+    // Set heart palette and tile
+    for (uint8_t i = 0; i < numLives; i++) {
+        spHeart[i] = spriteCount;
+        set_sprite_prop(spriteCount, 2);  // Heart - Palette 2
+        set_sprite_tile(spHeart[i], 15);  // Set tile
+        spriteCount++;
+    }
+
+    // Set explosion palette
+    spExplosion = spriteCount;
+    set_sprite_prop(spriteCount, 4);
+    spriteCount++;
+
+    // Set asteroids palette
+    for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
+        spAsteroid[i] = spriteCount;
+        set_sprite_prop(spriteCount, 3);
+        spriteCount++;
+    }
 
     // Set world palette and tile
     spWorld = spriteCount;
@@ -104,26 +132,6 @@ void init() {
     set_sprite_prop(spriteCount, 2);
     spriteCount++;
 
-    // Set asteroids palette
-    for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
-        spAsteroid[i] = spriteCount;
-        set_sprite_prop(spriteCount, 3);
-        spriteCount++;
-    }
-
-    // Set explosion palette
-    spExplosion = spriteCount;
-    set_sprite_prop(spriteCount, 4);
-    spriteCount++;
-
-    // Set heart palette and tile
-    for (uint8_t i = 0; i < numLives; i++) {
-        spHeart[i] = spriteCount;
-        set_sprite_prop(spriteCount, 2);  // Heart - Palette 2
-        set_sprite_tile(spHeart[i], 15);  // Set tile
-        spriteCount++;
-    }
-
     DISPLAY_ON;  // Turn on the display
 
     NR52_REG = 0x8F;  // Turn on the sound
@@ -132,7 +140,7 @@ void init() {
 
     initrand(sys_time);  // Start randon seed
 
-    helloStart();  // Call start screen
+    helloPrep();  // Call start screen
 }
 
 void updateSwitches() {
@@ -141,48 +149,29 @@ void updateSwitches() {
     SHOW_BKG;      // Show background
 }
 
-void helloStart() {
+void helloPrep() {
     // Set start screen palette and tiles
-    setBkgPalette(FullWidth, FullHeight, WorldMap_a);      // Set bkg palette
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, WorldMap);  // Set bkg tiles
-    move_bkg(0, 0);                                        // Move background to the 0x 0y position
+    setBkgPalette(0, 0, FullWidth, FullHeight, HelloWorld_a);  // Set bkg palette
+    set_bkg_tiles(0, 0, FullWidth, FullHeight, HelloWorld);    // Set bkg tiles
+    move_bkg(0, 0);                                            // Move background to the 0x 0y position
 
-    // Set variable to wait on start screen
-    hello = TRUE;
+    // Wait for start button press and do initialization
+    waitpad(J_START);
+    helloStart();
 }
 
 // TO-DO: Add some dialog on the start
-void helloTrans() {
-    // Move bg to the right
-    for (uint8_t i = 0; i < 15; i++) {
-        delay(30);
-        set_bkg_tiles(i, 0, FullWidth, FullHeight, WorldMap);
-    }
+void helloStart() {
+    // Call transition function
+    bkgTransition(0);
 
-    setBkgPalette(FullWidth, FullHeight, BlackScreen_a);  // Set bkg palette
-
-    // Transitions
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, BlankScreen);
-    delay(100);
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran1);
-    delay(100);
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran2);
-    delay(100);
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran3);
-    delay(100);
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran4);
-    delay(100);
-    set_bkg_tiles(0, 0, FullWidth, FullHeight, BlackScreen);
-    delay(100);
-
-    setBkgPalette(UniverseWidth, UniverseHeight, Universe_a);      // Set bkg palette
-    set_bkg_tiles(0, 0, UniverseWidth, UniverseHeight, Universe);  // Set universe map
-
-    hello = FALSE;
+    // Set universe palette and tiles
+    setBkgPalette(0, 0, UniverseWidth, UniverseHeight, Universe_a);
+    set_bkg_tiles(0, 0, UniverseWidth, UniverseHeight, Universe);
 
     // Start on screen center
-    world[0] = DEVICE_SCREEN_PX_WIDTH / 2;
-    world[1] = DEVICE_SCREEN_PX_HEIGHT / 2;
+    world[0] = (DEVICE_SCREEN_PX_WIDTH / 2) + 4;
+    world[1] = (DEVICE_SCREEN_PX_HEIGHT / 2) + 4;
 
     // Put world sprite on starting location
     move_sprite(spWorld, world[0], world[1]);
@@ -195,30 +184,89 @@ void helloTrans() {
     }
 }
 
+void bkgTransition(uint8_t type) {
+    // Transition type 0 - Game start
+    if (type == 0) {
+        // Move bg to the right
+        for (uint8_t i = 0; i < 15; i++) {
+            delay(30);
+            set_bkg_tiles(i, 0, FullWidth, FullHeight, HelloWorld);
+        }
+
+        setBkgPalette(0, 0, FullWidth, FullHeight, BlackScreen_a);  // Set bkg palette
+
+        // Transitions
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, BlankScreen);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran1);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran2);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran3);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran4);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, BlackScreen);
+        delay(100);
+    }
+
+    // Transition type 1 - Game over
+    if (type == 1) {
+        setBkgPalette(0, 0, FullWidth, FullHeight, BlackScreen_a);  // Set bkg palette
+
+        // Transitions
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, BlackScreen);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran4);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran3);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran2);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, Tran1);
+        delay(100);
+        set_bkg_tiles(0, 0, FullWidth, FullHeight, BlankScreen);
+        delay(100);
+    }
+}
+
 void gameOver() {
-    // To-DO: Game-over screen
+    // Do some blinking with the sprites
+    for (uint8_t i = 0; i < 6; i++) {
+        performant_delay(5);
+        HIDE_SPRITES;
+        performant_delay(5);
+        SHOW_SPRITES;
+    }
 
-    // Reset control variables
-    resetVariables();
-    // Hide sprites
-    hide_sprite(spWorld);
+    // Wait and actually hide sprites
+    performant_delay(10);
     hide_sprite(spFire);
-
+    hide_sprite(spWorld);
     for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
         hide_sprite(spAsteroid[i]);
     }
 
+    performant_delay(10);
+    move_bkg(0, 0);    // Move background to the 0x 0y position
+    bkgTransition(1);  // Call transition function
+
+    // Reset control variables
+    resetVariables();
+
+    // Set game over screen
+    setBkgPalette(0, 0, FullWidth, FullHeight, HelloWorld_a);
+    set_bkg_tiles(0, 0, FullWidth, FullHeight, GameOver);
+
+    // Wait for start button
+    waitpad(J_START);
+
     // Call start screen
-    helloStart();
+    performant_delay(10);
+    helloPrep();
 }
 
 void checkInput() {
-    // If on start screen, only check for start button
-    if (hello) {
-        waitpad(J_START);
-        helloTrans();
-    }
-
     // Current tile state of fire sprite
     currSprite = get_sprite_tile(2);
     hideFire = FALSE;
@@ -518,18 +566,19 @@ void asteroidMove() {
                 break;
         }
 
+        // Corrections to compensate background movement
         if (!stopBG && corrAsteroid) {
             switch (bgMoveDir) {
-                case 0:
+                case 0:  // Background moving to the left
                     asteroids[0][i]--;
                     break;
-                case 1:
+                case 1:  // Background moving to the right
                     asteroids[0][i]++;
                     break;
-                case 2:
+                case 2:  // Background moving to the top
                     asteroids[1][i]--;
                     break;
-                case 3:
+                case 3:  // Background moving to the bottom
                     asteroids[1][i]++;
                     break;
                 default:
@@ -542,22 +591,22 @@ void asteroidMove() {
 void bgMove() {
     // Move the background if the player is on the edge of the map
     if (!stopBG) {
-        if ((world[0] >= xMax) && xMove) {
+        if ((world[0] >= xMax) && xMove) {  // Right limit of screen, move bkg left
             scroll_bkg(1, 0);
             bgMoveDir = 0;
             corrAsteroid = TRUE;
 
-        } else if ((world[0] <= xMin) && xMove) {
+        } else if ((world[0] <= xMin) && xMove) {  // Left limit of screen, move bkg right
             scroll_bkg(-1, 0);
             bgMoveDir = 1;
             corrAsteroid = TRUE;
 
-        } else if ((world[1] >= yMax) && !xMove) {
+        } else if ((world[1] >= yMax) && !xMove) {  // Bottom limit of screen, move bkg up
             scroll_bkg(0, 1);
             bgMoveDir = 2;
             corrAsteroid = TRUE;
 
-        } else if ((world[1] <= yMin) && !xMove) {
+        } else if ((world[1] <= yMin) && !xMove) {  // Top limit of screen, move bkg down
             scroll_bkg(0, -1);
             bgMoveDir = 3;
             corrAsteroid = TRUE;
@@ -569,8 +618,9 @@ void bgMove() {
 }
 
 void explosion() {
-    hide_sprite(spWorld);     // Hide world sprite
-    hide_sprite(spCountAst);  // Hide the asteroid
+    // Hide the asteroid
+    delay(10);
+    hide_sprite(spCountAst);
 
     // Set explosion 1 and move a little
     set_sprite_tile(spExplosion, 13);
@@ -595,6 +645,7 @@ void removeLives() {
     hide_sprite(spHeart[numLives]);  // Hide heart sprite
 
     if (numLives == 0) {
+        performant_delay(5);
         gameOver();
     }
 }
@@ -607,10 +658,16 @@ void resetVariables() {
     aux = 0;
 }
 
-void setBkgPalette(uint8_t x, uint8_t y, unsigned char map[]) {
-    VBK_REG = VBK_ATTRIBUTES;        // Select VRAM bank 1
-    set_bkg_tiles(0, 0, x, y, map);  // Set bkg atributes
-    VBK_REG = VBK_TILES;             // Swittch back to VRAM bank 0
+void setBkgPalette(uint8_t xMin, uint8_t yMin, uint8_t xMax, uint8_t yMax, unsigned char map[]) {
+    VBK_REG = VBK_ATTRIBUTES;                    // Select VRAM bank 1
+    set_bkg_tiles(xMin, yMin, xMax, yMax, map);  // Set bkg atributes
+    VBK_REG = VBK_TILES;                         // Swittch back to VRAM bank 0
+}
+
+void performant_delay(uint8_t numloops) {
+    for (uint8_t i = 0; i != numloops; i++) {
+        wait_vbl_done();
+    }
 }
 
 BOOLEAN collisionCheck(uint8_t x1, uint8_t y1, uint8_t w1, uint8_t h1, uint8_t x2, uint8_t y2, uint8_t w2, uint8_t h2) {

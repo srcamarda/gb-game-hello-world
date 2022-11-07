@@ -3,6 +3,14 @@
 #include "sprites.c"
 #include "sprites.h"
 
+/*
+
+ SPRITES_P.C
+
+ Sprites palettes.
+
+*/
+
 const uint16_t sprites_p[] =
     {
         SpritesCGBPal0c0, SpritesCGBPal0c1, SpritesCGBPal0c2, SpritesCGBPal0c3,

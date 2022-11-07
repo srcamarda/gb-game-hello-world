@@ -1,20 +1,12 @@
-#include <gb/gb.h>
+/*
 
-#include "world_tile_set.c"
-#include "world_tile_set.h"
+ BACKGROUND_A.C
 
-const uint16_t world_tile_p[] =
-    {
-        WorldTileSetCGBPal0c0, WorldTileSetCGBPal0c1, WorldTileSetCGBPal0c2, WorldTileSetCGBPal0c3,
-        WorldTileSetCGBPal1c0, WorldTileSetCGBPal1c1, WorldTileSetCGBPal1c2, WorldTileSetCGBPal1c3,
-        WorldTileSetCGBPal2c0, WorldTileSetCGBPal2c1, WorldTileSetCGBPal2c2, WorldTileSetCGBPal2c3,
-        WorldTileSetCGBPal3c0, WorldTileSetCGBPal3c1, WorldTileSetCGBPal3c2, WorldTileSetCGBPal3c3,
-        WorldTileSetCGBPal4c0, WorldTileSetCGBPal4c1, WorldTileSetCGBPal4c2, WorldTileSetCGBPal4c3,
-        WorldTileSetCGBPal5c0, WorldTileSetCGBPal5c1, WorldTileSetCGBPal5c2, WorldTileSetCGBPal5c3,
-        WorldTileSetCGBPal6c0, WorldTileSetCGBPal6c1, WorldTileSetCGBPal6c2, WorldTileSetCGBPal6c3,
-        WorldTileSetCGBPal7c0, WorldTileSetCGBPal7c1, WorldTileSetCGBPal7c2, WorldTileSetCGBPal7c3};
+ Background maps attributes source.
 
-unsigned char WorldMap_a[] =
+*/
+
+unsigned char HelloWorld_a[] =
     {
         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,

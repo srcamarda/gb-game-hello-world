@@ -22,7 +22,6 @@
 
 */
 
-
 /* Bank of tiles. */
 #define SpritesBank 0
 
