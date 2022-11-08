@@ -21,5 +21,5 @@ const unsigned char GameOver_s2[][MAX_STRING_SIZE] =
         "    Go away!!   ",
         "You wanna kill  ",
         "everybody again?",
-        "Ok. Press start ",
+        "Ok.. Press start",
         "to fail again..."};
