@@ -1,14 +1,20 @@
 #include <gb/cgb.h>
 #include <gb/gb.h>
 #include <rand.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "background.c"
 #include "background_a.c"
+#include "characters.c"
 #include "main_tile_set_p.c"
 #include "sprites_p.c"
+#include "strings.c"
+#include "win_tile_set.c"
 #include "windows.c"
 
-#define MAX_ASTEROIDS 4
+// Constants
+#define MAX_ASTEROIDS 8
 #define TOTAL_LIVES 5
 
 const int xMax = DEVICE_SCREEN_PX_WIDTH - 4;
@@ -16,6 +22,12 @@ const int xMin = 12;
 const int yMax = DEVICE_SCREEN_PX_HEIGHT + 4;
 const int yMin = 20;
 
+const uint8_t firstRowAdr = 0xd0;
+const uint8_t secondRowAdr = 0xe0;
+const uint8_t blackTileAdr = 0xf0;
+const uint8_t charOffset = 32;
+
+// Boolean vars
 BOOLEAN hideFire = TRUE;
 BOOLEAN stopBG = TRUE;
 BOOLEAN xMove = TRUE;
@@ -24,6 +36,16 @@ BOOLEAN resetAsteroid = FALSE;
 BOOLEAN corrAsteroid = FALSE;
 BOOLEAN collision = FALSE;
 
+// Integer vars
+int idxBkgTiles = 72;
+int idxWinTiles = 9;
+int idxSprites = 16;
+
+int timeAsteroid = 0;
+int timeAsteroid2 = 0;
+int valPosAsteroid;
+
+// Unsigned integer vars
 uint8_t asteroids[2][MAX_ASTEROIDS];
 uint8_t propAsteroid[3][MAX_ASTEROIDS];
 uint8_t world[2];
@@ -46,15 +68,9 @@ uint8_t spFire;
 uint8_t spExplosion;
 uint8_t spHeart[TOTAL_LIVES];
 uint8_t spAsteroid[MAX_ASTEROIDS];
+uint8_t openDiaLines;
 
-int timeAsteroid = 0;
-int timeAsteroid2 = 0;
-int valPosAsteroid;
-
-int idxBkgTiles = 72;
-int idxWinTiles = 10;
-int idxSprites = 16;
-
+// Functions
 void init();
 void updateSwitches();
 void helloPrep();
@@ -69,10 +85,12 @@ void bgMove();
 void explosion();
 void removeLives();
 void resetVariables();
+void performantDelay(uint8_t);
 void setBkgPalette(uint8_t, uint8_t, uint8_t, uint8_t, unsigned char[]);
-void performant_delay(uint8_t);
+uint8_t showDialog(unsigned char[][MAX_STRING_SIZE], uint8_t, uint8_t);
 BOOLEAN collisionCheck(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
 
+// Main loop
 void main() {
     init();
 
@@ -87,6 +105,7 @@ void main() {
     }
 }
 
+// Start sequence. Initiate graphics
 void init() {
     // Load background and sprite palettes
     aux = 0;
@@ -98,7 +117,7 @@ void init() {
 
     // Load background, windows and sprite tiles to vram
     set_bkg_data(0, idxBkgTiles, MainTileSet);
-    set_win_data(idxBkgTiles, idxWinTiles, Windows);
+    set_win_data(idxBkgTiles, idxWinTiles, WinTileSet);
     set_sprite_data(0, idxSprites, Sprites);
 
     // Set heart palette and tile
@@ -143,12 +162,14 @@ void init() {
     helloPrep();  // Call start screen
 }
 
+// Ensures bkg and sprites are visible
 void updateSwitches() {
-    HIDE_WIN;      // Hide windows
+    // HIDE_WIN;      // Hide windows
     SHOW_SPRITES;  // Show sprites
     SHOW_BKG;      // Show background
 }
 
+// Start screen
 void helloPrep() {
     // Set start screen palette and tiles
     setBkgPalette(0, 0, FullWidth, FullHeight, HelloWorld_a);  // Set bkg palette
@@ -160,6 +181,7 @@ void helloPrep() {
     helloStart();
 }
 
+// Game start sequence
 // TO-DO: Add some dialog on the start
 void helloStart() {
     // Call transition function
@@ -171,7 +193,7 @@ void helloStart() {
 
     // Start on screen center
     world[0] = (DEVICE_SCREEN_PX_WIDTH / 2) + 4;
-    world[1] = (DEVICE_SCREEN_PX_HEIGHT / 2) + 4;
+    world[1] = (DEVICE_SCREEN_PX_HEIGHT / 2) + 8;
 
     // Put world sprite on starting location
     move_sprite(spWorld, world[0], world[1]);
@@ -184,6 +206,7 @@ void helloStart() {
     }
 }
 
+// Simple background transitions
 void bkgTransition(uint8_t type) {
     // Transition type 0 - Game start
     if (type == 0) {
@@ -230,24 +253,41 @@ void bkgTransition(uint8_t type) {
     }
 }
 
+// Game over sequence
 void gameOver() {
     // Do some blinking with the sprites
     for (uint8_t i = 0; i < 6; i++) {
-        performant_delay(5);
+        performantDelay(5);
         HIDE_SPRITES;
-        performant_delay(5);
+        performantDelay(5);
         SHOW_SPRITES;
     }
 
     // Wait and actually hide sprites
-    performant_delay(10);
+    performantDelay(10);
     hide_sprite(spFire);
     hide_sprite(spWorld);
     for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
         hide_sprite(spAsteroid[i]);
     }
 
-    performant_delay(10);
+    // Show first dialog
+    openDiaLines = 0;
+
+    do {
+        // Show dialog lines
+        openDiaLines = showDialog(GameOver_s1, sizeof(GameOver_s1) / MAX_STRING_SIZE, openDiaLines);
+
+        // Wait for A button press
+        waitpad(J_A);
+
+        performantDelay(5);
+
+    } while (openDiaLines != 0);
+
+    HIDE_WIN;
+
+    performantDelay(10);
     move_bkg(0, 0);    // Move background to the 0x 0y position
     bkgTransition(1);  // Call transition function
 
@@ -258,14 +298,32 @@ void gameOver() {
     setBkgPalette(0, 0, FullWidth, FullHeight, HelloWorld_a);
     set_bkg_tiles(0, 0, FullWidth, FullHeight, GameOver);
 
-    // Wait for start button
-    waitpad(J_START);
+    // Show second dialog
+    openDiaLines = 0;
+
+    do {
+        // Show dialog lines
+        openDiaLines = showDialog(GameOver_s2, sizeof(GameOver_s2) / MAX_STRING_SIZE, openDiaLines);
+
+        if (openDiaLines != 0) {  // Wait for A button press
+            waitpad(J_A);
+
+        } else {
+            waitpad(J_START);  // Wait for start button press
+        }
+
+        performantDelay(5);
+
+    } while (openDiaLines != 0);
+
+    HIDE_WIN;
 
     // Call start screen
-    performant_delay(10);
+    performantDelay(10);
     helloPrep();
 }
 
+// Checks for gamepad input and act on it
 void checkInput() {
     // Current tile state of fire sprite
     currSprite = get_sprite_tile(2);
@@ -349,6 +407,7 @@ void checkInput() {
     }
 }
 
+// Move player sprite
 void spriteMove() {
     // Move the sprite to the position of X and Y
     move_sprite(spWorld, world[0], world[1]);
@@ -360,6 +419,7 @@ void spriteMove() {
     }
 }
 
+// Control asteroids
 void asteroidControl() {
     if (startAsteroid) {
         if (numAsteroids < MAX_ASTEROIDS || resetAsteroid) {
@@ -499,6 +559,7 @@ void asteroidControl() {
     }
 }
 
+// Move the asteroids
 // TO-DO: Add velocity control?
 void asteroidMove() {
     for (uint8_t i = 0; i < numAsteroids; i++) {
@@ -523,7 +584,7 @@ void asteroidMove() {
             randNum = rand();
 
             // Define if asteroid will be reseted
-            if (randNum < 5 || randNum > 250) {
+            if (randNum < 15 || randNum > 240) {
                 resetAsteroid = TRUE;
                 startAsteroid = TRUE;
                 currAsteroid = i;
@@ -588,6 +649,7 @@ void asteroidMove() {
     }
 }
 
+// Moves the background
 void bgMove() {
     // Move the background if the player is on the edge of the map
     if (!stopBG) {
@@ -617,6 +679,7 @@ void bgMove() {
     }
 }
 
+// Simple explosion animation
 void explosion() {
     // Hide the asteroid
     delay(10);
@@ -639,17 +702,19 @@ void explosion() {
     hide_sprite(spExplosion);  // Hide explosion
 }
 
+// Remove lives when the player hits a asteroid
 void removeLives() {
     numLives--;
 
     hide_sprite(spHeart[numLives]);  // Hide heart sprite
 
     if (numLives == 0) {
-        performant_delay(5);
+        performantDelay(5);
         gameOver();
     }
 }
 
+// Set need variables back to starting values
 void resetVariables() {
     numLives = TOTAL_LIVES;
     numAsteroids = 0;
@@ -658,18 +723,65 @@ void resetVariables() {
     aux = 0;
 }
 
+// Set palette for the background
 void setBkgPalette(uint8_t xMin, uint8_t yMin, uint8_t xMax, uint8_t yMax, unsigned char map[]) {
     VBK_REG = VBK_ATTRIBUTES;                    // Select VRAM bank 1
     set_bkg_tiles(xMin, yMin, xMax, yMax, map);  // Set bkg atributes
     VBK_REG = VBK_TILES;                         // Swittch back to VRAM bank 0
 }
 
-void performant_delay(uint8_t numloops) {
+// Simple replacement for wait()
+void performantDelay(uint8_t numloops) {
     for (uint8_t i = 0; i != numloops; i++) {
         wait_vbl_done();
     }
 }
 
+// Draws given text in the dialog box
+uint8_t showDialog(unsigned char textLines[][MAX_STRING_SIZE], uint8_t numLines, uint8_t lastLine) {
+    //diaVisible = TRUE;
+
+    set_win_data(blackTileAdr, 1, blackTile);
+
+    // Clear window with black tiles
+    for (uint8_t i = 0; i != charOffset; i++) {
+        set_win_data(firstRowAdr + i, 1, blackTile);
+    }
+
+    // Write the next two lines
+    for (aux = 0; aux != 2; aux++) {
+        for (uint8_t i = 0; i < 16; i++) {
+            if (aux == 0) {
+                set_win_data(firstRowAdr + i, 1, charSprites[textLines[aux + lastLine][i] - charOffset]);  // First line
+            } else {
+                set_win_data(secondRowAdr + i, 1, charSprites[textLines[aux + lastLine][i] - charOffset]);  // Second line
+            }
+        }
+
+        // When amount of lines is even
+        if ((aux + 1) + lastLine == numLines) {
+            return 0;
+        }
+
+        // When amount of lines is odd
+        if (aux + lastLine == numLines) {
+            // remove second, black line
+            for (uint8_t i = 0; i != 16; i++) {
+                set_win_data(secondRowAdr + i, 1, DiaWindow);
+            }
+            return 0;
+        }
+    }
+
+    set_win_tiles(0, 0, 20, 5, DiaWindow);
+    move_win(7, 104);
+
+    SHOW_WIN;
+
+    return aux + lastLine;
+}
+
+// Checks collision between two objects
 BOOLEAN collisionCheck(uint8_t x1, uint8_t y1, uint8_t w1, uint8_t h1, uint8_t x2, uint8_t y2, uint8_t w2, uint8_t h2) {
     if ((x1 < (x2 + w2)) && ((x1 + w1) > x2) && (y1 < (h2 + y2)) && ((y1 + h1) > y2)) {
         return TRUE;

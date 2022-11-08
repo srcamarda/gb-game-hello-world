@@ -22,33 +22,6 @@
 
 */
 
-/* Bank of tiles. */
-#define MainTileSetBank 0
-
-/* Super Gameboy palette 0 */
-#define MainTileSetSGBPal0c0 6076
-#define MainTileSetSGBPal0c1 8935
-#define MainTileSetSGBPal0c2 6596
-#define MainTileSetSGBPal0c3 5344
-
-/* Super Gameboy palette 1 */
-#define MainTileSetSGBPal1c0 6076
-#define MainTileSetSGBPal1c1 8935
-#define MainTileSetSGBPal1c2 6596
-#define MainTileSetSGBPal1c3 5344
-
-/* Super Gameboy palette 2 */
-#define MainTileSetSGBPal2c0 6076
-#define MainTileSetSGBPal2c1 8935
-#define MainTileSetSGBPal2c2 6596
-#define MainTileSetSGBPal2c3 5344
-
-/* Super Gameboy palette 3 */
-#define MainTileSetSGBPal3c0 6076
-#define MainTileSetSGBPal3c1 8935
-#define MainTileSetSGBPal3c2 6596
-#define MainTileSetSGBPal3c3 5344
-
 /* Gameboy Color palette 0 */
 #define MainTileSetCGBPal0c0 32767
 #define MainTileSetCGBPal0c1 22197
