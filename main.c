@@ -1,17 +1,17 @@
 #include <gb/cgb.h>
 #include <gb/gb.h>
 #include <rand.h>
-#include <stdio.h>
-#include <string.h>
 
-#include "background.c"
-#include "background_a.c"
-#include "characters.c"
-#include "main_tile_set_p.c"
-#include "sprites_p.c"
-#include "strings.c"
-#include "win_tile_set.c"
-#include "windows.c"
+#include "art/background.c"       // Backgrounds maps
+#include "art/background_a.c"     // Background atributtes
+#include "art/characters.c"       // Letters and numbers
+#include "art/main_tile_set_p.c"  // Background tiles
+#include "art/sprites_p.c"        // Sprites
+#include "art/win_tile_set.c"     // Windows tiles
+#include "art/windows.c"          // Windows maps
+#include "cbtfx.c"                // Sound driver
+#include "sfx.c"                  // Sound effects
+#include "strings.c"              // Dialog string
 
 // Constants
 #define MAX_ASTEROIDS 8
@@ -92,7 +92,9 @@ BOOLEAN collisionCheck(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uin
 
 // Main loop
 void main() {
-    init();
+    add_VBL(CBTFX_update);  // Audio driver VBL interrupt
+
+    init();  // Call init functions
 
     while (1) {
         checkInput();       // Check for user input
@@ -164,7 +166,6 @@ void init() {
 
 // Ensures bkg and sprites are visible
 void updateSwitches() {
-    // HIDE_WIN;      // Hide windows
     SHOW_SPRITES;  // Show sprites
     SHOW_BKG;      // Show background
 }
@@ -176,9 +177,9 @@ void helloPrep() {
     set_bkg_tiles(0, 0, FullWidth, FullHeight, HelloWorld);    // Set bkg tiles
     move_bkg(0, 0);                                            // Move background to the 0x 0y position
 
-    // Wait for start button press and do initialization
-    waitpad(J_START);
-    helloStart();
+    waitpad(J_START);   // Wait for start button press and do initialization
+    CBTFX_PLAY_SFX_07;  // Starting sound
+    helloStart();       // Call game start sequence
 }
 
 // Game start sequence
@@ -271,6 +272,8 @@ void gameOver() {
         hide_sprite(spAsteroid[i]);
     }
 
+    CBTFX_PLAY_SFX_09;  // Lose sound
+
     // Show first dialog
     openDiaLines = 0;
 
@@ -280,6 +283,7 @@ void gameOver() {
 
         // Wait for A button press
         waitpad(J_A);
+        CBTFX_PLAY_SFX_01;  // Click sound
 
         performantDelay(5);
 
@@ -294,6 +298,8 @@ void gameOver() {
     // Reset control variables
     resetVariables();
 
+    CBTFX_PLAY_SFX_09;  // Lose sound
+
     // Set game over screen
     setBkgPalette(0, 0, FullWidth, FullHeight, HelloWorld_a);
     set_bkg_tiles(0, 0, FullWidth, FullHeight, GameOver);
@@ -307,6 +313,7 @@ void gameOver() {
 
         if (openDiaLines != 0) {  // Wait for A button press
             waitpad(J_A);
+            CBTFX_PLAY_SFX_01;  // Click sound
 
         } else {
             waitpad(J_START);  // Wait for start button press
@@ -320,6 +327,7 @@ void gameOver() {
 
     // Call start screen
     performantDelay(10);
+    CBTFX_PLAY_SFX_03;
     helloPrep();
 }
 
@@ -685,6 +693,8 @@ void explosion() {
     delay(10);
     hide_sprite(spCountAst);
 
+    CBTFX_PLAY_SFX_05;  // Explosion sound
+
     // Set explosion 1 and move a little
     set_sprite_tile(spExplosion, 13);
     move_sprite(spExplosion, world[0], world[1]);
@@ -739,8 +749,6 @@ void performantDelay(uint8_t numloops) {
 
 // Draws given text in the dialog box
 uint8_t showDialog(unsigned char textLines[][MAX_STRING_SIZE], uint8_t numLines, uint8_t lastLine) {
-    //diaVisible = TRUE;
-
     set_win_data(blackTileAdr, 1, blackTile);
 
     // Clear window with black tiles
