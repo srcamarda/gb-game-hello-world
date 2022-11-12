@@ -183,7 +183,6 @@ void helloPrep() {
 }
 
 // Game start sequence
-// TO-DO: Add some dialog on the start
 void helloStart() {
     // Call transition function
     bkgTransition(0);
@@ -192,12 +191,56 @@ void helloStart() {
     setBkgPalette(0, 0, UniverseWidth, UniverseHeight, Universe_a);
     set_bkg_tiles(0, 0, UniverseWidth, UniverseHeight, Universe);
 
-    // Start on screen center
-    world[0] = (DEVICE_SCREEN_PX_WIDTH / 2) + 4;
-    world[1] = (DEVICE_SCREEN_PX_HEIGHT / 2) + 8;
+    do {
+        // Show dialog lines
+        openDiaLines = showDialog(Start_s1, sizeof(Start_s1) / MAX_STRING_SIZE, openDiaLines);
 
-    // Put world sprite on starting location
-    move_sprite(spWorld, world[0], world[1]);
+        // Wait for A button press
+        waitpad(J_A);
+        CBTFX_PLAY_SFX_01;  // Click sound
+
+        performantDelay(5);
+
+    } while (openDiaLines != 0);
+
+    HIDE_WIN;
+
+    // Set world and fire sprite starting location
+    world[0] = (DEVICE_SCREEN_PX_WIDTH / 2) + 4;
+    world[1] = yMax + 8;
+    fire[0] = world[0];
+    fire[1] = world[1] + 8;
+
+    set_sprite_tile(spFire, 1);  // Set fire up sprite
+
+    SHOW_SPRITES;
+
+    // Move world to screen center
+    for (uint8_t i = 0; i < (DEVICE_SCREEN_PX_HEIGHT / 2); i++) {
+        world[1]--;
+        fire[1]--;
+        move_sprite(spWorld, world[0], world[1]);
+        move_sprite(spFire, fire[0], fire[1]);
+        delay(30);
+    }
+
+    hide_sprite(spFire);  // Hide fire sprite
+
+    performantDelay(10);
+
+    do {
+        // Show dialog lines
+        openDiaLines = showDialog(Start_s2, sizeof(Start_s2) / MAX_STRING_SIZE, openDiaLines);
+
+        // Wait for A button press
+        waitpad(J_A);
+        CBTFX_PLAY_SFX_01;  // Click sound
+
+        performantDelay(5);
+
+    } while (openDiaLines != 0);
+
+    HIDE_WIN;
 
     // Put heart sprites on starting location
     aux = 12;

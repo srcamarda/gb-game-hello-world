@@ -23,3 +23,21 @@ const unsigned char GameOver_s2[][MAX_STRING_SIZE] =
         "everybody again?",
         "Ok.. Press start",
         "to fail again..."};
+
+const unsigned char Start_s1[][MAX_STRING_SIZE] =
+    {
+        "In the year 6022",
+        "apocalipse begun",
+        "Giant asteroids ",
+        "in our system...",
+        "The only way to ",
+        "save the Earth..",
+        "Was to fly away ",
+        "with the planet "};
+
+const unsigned char Start_s2[][MAX_STRING_SIZE] =
+    {
+        "Try to save the ",
+        "humans on earth ",
+        "And also all the",
+        "astronauts!     "};
