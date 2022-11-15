@@ -22,6 +22,9 @@ const int xMin = 12;
 const int yMax = DEVICE_SCREEN_PX_HEIGHT + 4;
 const int yMin = 20;
 
+const int uniPxWidth = UniverseWidth * 8;
+const int uniPxHeight = UniverseHeight * 8;
+
 const uint8_t firstRowAdr = 0xd0;
 const uint8_t secondRowAdr = 0xe0;
 const uint8_t blackTileAdr = 0xf0;
@@ -33,41 +36,37 @@ BOOLEAN stopBG = TRUE;
 BOOLEAN xMove = TRUE;
 BOOLEAN startAsteroid = FALSE;
 BOOLEAN resetAsteroid = FALSE;
-BOOLEAN corrAsteroid = FALSE;
+BOOLEAN corrBgMove = FALSE;
 BOOLEAN collision = FALSE;
+BOOLEAN resetAstronaut = TRUE;
 
 // Integer vars
 int idxBkgTiles = 72;
 int idxWinTiles = 9;
-int idxSprites = 16;
-
+int idxSprites = 18;
 int timeAsteroid = 0;
-int timeAsteroid2 = 0;
-int valPosAsteroid;
 
 // Unsigned integer vars
 uint8_t asteroids[2][MAX_ASTEROIDS];
 uint8_t propAsteroid[3][MAX_ASTEROIDS];
 uint8_t world[2];
 uint8_t fire[2];
+uint8_t astronaut[2];
 uint8_t numLives = TOTAL_LIVES;
 uint8_t numAsteroids = 0;
 uint8_t spriteCount = 0;
 uint8_t aux = 0;
-uint8_t spCountAst;
-uint8_t spCountTile;
 uint8_t currAsteroid;
-uint8_t bgMoveDir;
 uint8_t currSprite;
+uint8_t bgMoveDir;
 uint8_t randNum;
-uint8_t randSprite;
-uint8_t randPos;
-uint8_t randTime;
+uint8_t randNum2;
 uint8_t spWorld;
 uint8_t spFire;
 uint8_t spExplosion;
 uint8_t spHeart[TOTAL_LIVES];
 uint8_t spAsteroid[MAX_ASTEROIDS];
+uint8_t spAstronaut;
 uint8_t openDiaLines;
 
 // Functions
@@ -81,6 +80,7 @@ void checkInput();
 void spriteMove();
 void asteroidControl();
 void asteroidMove();
+void astronautControl();
 void bgMove();
 void explosion();
 void removeLives();
@@ -97,13 +97,14 @@ void main() {
     init();  // Call init functions
 
     while (1) {
-        checkInput();       // Check for user input
-        spriteMove();       // Call function to move sprites
-        bgMove();           // Call function to move background
-        asteroidControl();  // Control asteroids creation and movement
-        asteroidMove();     // Move asteroids
-        updateSwitches();   // Make sure the SHOW_SPRITES and SHOW_BKG switches are on each loop
-        wait_vbl_done();    // Wait until VBLANK to avoid corrupting memory
+        checkInput();        // Check for user input
+        spriteMove();        // Call function to move sprites
+        bgMove();            // Call function to move background
+        asteroidControl();   // Control asteroids creation and movement
+        asteroidMove();      // Move asteroids
+        astronautControl();  // Control the astronauts
+        updateSwitches();    // Make sure the SHOW_SPRITES and SHOW_BKG switches are on each loop
+        wait_vbl_done();     // Wait until VBLANK to avoid corrupting memory
     }
 }
 
@@ -151,6 +152,10 @@ void init() {
     // Set fire palette
     spFire = spriteCount;
     set_sprite_prop(spriteCount, 2);
+    spriteCount++;
+
+    // Set astronaut var
+    spAstronaut = spriteCount;
     spriteCount++;
 
     DISPLAY_ON;  // Turn on the display
@@ -311,6 +316,7 @@ void gameOver() {
     performantDelay(10);
     hide_sprite(spFire);
     hide_sprite(spWorld);
+    hide_sprite(spAstronaut);
     for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
         hide_sprite(spAsteroid[i]);
     }
@@ -468,6 +474,13 @@ void spriteMove() {
     } else {
         move_sprite(spFire, fire[0], fire[1]);
     }
+
+    // If there is a colision between the player and the astronaut
+    collision = collisionCheck(world[0], world[1], 8, 8, astronaut[0], astronaut[1], 4, 4);
+
+    if (collision) {
+        resetAstronaut = TRUE;
+    }
 }
 
 // Control asteroids
@@ -476,8 +489,7 @@ void asteroidControl() {
         if (numAsteroids < MAX_ASTEROIDS || resetAsteroid) {
             // Generate randon numbers
             randNum = rand();
-            randSprite = rand();
-            randPos = rand();
+            randNum2 = rand();
 
             // If asteroid is a new one (not destroyed)
             if (!resetAsteroid) {
@@ -485,40 +497,41 @@ void asteroidControl() {
             }
 
             // Define screen side for asteroid start
+            // propAsteroid[0] indicates the screen side
             if (randNum < 64) {  // Asteroid comes from up
-                valPosAsteroid = (randPos * DEVICE_SCREEN_PX_WIDTH) / 255;
-                asteroids[0][currAsteroid] = valPosAsteroid;
+                asteroids[0][currAsteroid] = (randNum2 * DEVICE_SCREEN_PX_WIDTH) / 255;
                 asteroids[1][currAsteroid] = 0;
                 propAsteroid[0][currAsteroid] = 0;
 
             } else if (randNum < 128) {  // Asteroid comes from bottom
-                valPosAsteroid = (randPos * DEVICE_SCREEN_PX_WIDTH) / 255;
-                asteroids[0][currAsteroid] = valPosAsteroid;
+                asteroids[0][currAsteroid] = (randNum2 * DEVICE_SCREEN_PX_WIDTH) / 255;
                 asteroids[1][currAsteroid] = DEVICE_SCREEN_PX_HEIGHT;
                 propAsteroid[0][currAsteroid] = 1;
 
             } else if (randNum < 192) {  // Asteroid comes from left
-                valPosAsteroid = (randPos * DEVICE_SCREEN_PX_HEIGHT) / 255;
                 asteroids[0][currAsteroid] = 0;
-                asteroids[1][currAsteroid] = valPosAsteroid;
+                asteroids[1][currAsteroid] = (randNum2 * DEVICE_SCREEN_PX_HEIGHT) / 255;
                 propAsteroid[0][currAsteroid] = 2;
 
             } else {  // Asteroid comes from right
-                valPosAsteroid = (randPos * DEVICE_SCREEN_PX_HEIGHT) / 255;
                 asteroids[0][currAsteroid] = DEVICE_SCREEN_PX_WIDTH;
-                asteroids[1][currAsteroid] = valPosAsteroid;
+                asteroids[1][currAsteroid] = (randNum2 * DEVICE_SCREEN_PX_HEIGHT) / 255;
                 propAsteroid[0][currAsteroid] = 3;
             }
 
+            randNum = rand();
+
             // Define sprite variant
-            if (randSprite < 85) {
+            // propAsteroid[1] indicates the asteroid direction/angle
+            if (randNum < 85) {
                 propAsteroid[1][currAsteroid] = 0;  // Sprite 1 - Left OR Up
-            } else if (randSprite < 170) {
+            } else if (randNum < 170) {
                 propAsteroid[1][currAsteroid] = 1;  // Sprite 2 - Right OR Down
             } else {
                 propAsteroid[1][currAsteroid] = 2;  // Sprite 3 - Center
             }
 
+            // propAsteroid[2] indicates the asteroid tile to use
             switch (propAsteroid[0][currAsteroid]) {
                 case 0:  // Asteroid comes from up
                     switch (propAsteroid[1][currAsteroid]) {
@@ -584,9 +597,7 @@ void asteroidControl() {
                     break;
             }
 
-            spCountAst = spAsteroid[currAsteroid];        // Determine asteroid sprite
-            spCountTile = propAsteroid[2][currAsteroid];  // Determines the position tile
-            set_sprite_tile(spCountAst, spCountTile);     // Set asteroid sprite
+            set_sprite_tile(spAsteroid[currAsteroid], propAsteroid[2][currAsteroid]);  // Set asteroid sprite
 
             if (resetAsteroid) {
                 resetAsteroid = FALSE;
@@ -599,12 +610,11 @@ void asteroidControl() {
     }
 
     timeAsteroid++;
-    timeAsteroid2++;
 
-    randTime = rand();
+    randNum = rand();
 
     // Create a anew asteroid
-    if ((timeAsteroid > 300 + randTime) && (numAsteroids < MAX_ASTEROIDS)) {
+    if ((timeAsteroid > 300 + randNum) && (numAsteroids < MAX_ASTEROIDS)) {
         startAsteroid = TRUE;
         timeAsteroid = 0;
     }
@@ -614,8 +624,7 @@ void asteroidControl() {
 // TO-DO: Add velocity control?
 void asteroidMove() {
     for (uint8_t i = 0; i < numAsteroids; i++) {
-        spCountAst = spAsteroid[i];
-        move_sprite(spCountAst, asteroids[0][i], asteroids[1][i]);
+        move_sprite(spAsteroid[i], asteroids[0][i], asteroids[1][i]);
 
         // If there is a colision between the asteroid and the player
         collision = collisionCheck(world[0], world[1], 8, 8, asteroids[0][i], asteroids[1][i], 8, 8);
@@ -679,7 +688,7 @@ void asteroidMove() {
         }
 
         // Corrections to compensate background movement
-        if (!stopBG && corrAsteroid) {
+        if (!stopBG && corrBgMove) {
             switch (bgMoveDir) {
                 case 0:  // Background moving to the left
                     asteroids[0][i]--;
@@ -700,6 +709,62 @@ void asteroidMove() {
     }
 }
 
+void astronautControl() {
+    if (resetAstronaut) {
+        resetAstronaut = FALSE;
+
+        randNum = rand();
+        randNum2 = rand();
+
+        // Determine astronaut X and Y position
+        astronaut[0] = (randNum * uniPxWidth) / 255;
+        astronaut[1] = (randNum2 * uniPxHeight) / 255;
+
+        randNum = rand();
+        randNum2 = rand();
+
+        // Determines astronaut tile
+        if (randNum < 128) {
+            set_sprite_tile(spAstronaut, 16);
+        } else {
+            set_sprite_tile(spAstronaut, 17);
+        }
+
+        // Determines astronaut palette
+        if (randNum2 < 128) {
+            set_sprite_prop(spAstronaut, 5);
+        } else {
+            set_sprite_prop(spAstronaut, 6);
+        }
+
+        // Put astronaut on position
+        move_sprite(spAstronaut, astronaut[0], astronaut[1]);
+    }
+
+    // Corrections to compensate background movement
+    if (!stopBG && corrBgMove) {
+        switch (bgMoveDir) {
+            case 0:  // Background moving to the left
+                astronaut[0]--;
+                break;
+            case 1:  // Background moving to the right
+                astronaut[0]++;
+                break;
+            case 2:  // Background moving to the top
+                astronaut[1]--;
+                break;
+            case 3:  // Background moving to the bottom
+                astronaut[1]++;
+                break;
+            default:
+                break;
+        }
+
+        // Put astronaut on position
+        move_sprite(spAstronaut, astronaut[0], astronaut[1]);
+    }
+}
+
 // Moves the background
 void bgMove() {
     // Move the background if the player is on the edge of the map
@@ -707,25 +772,25 @@ void bgMove() {
         if ((world[0] >= xMax) && xMove) {  // Right limit of screen, move bkg left
             scroll_bkg(1, 0);
             bgMoveDir = 0;
-            corrAsteroid = TRUE;
+            corrBgMove = TRUE;
 
         } else if ((world[0] <= xMin) && xMove) {  // Left limit of screen, move bkg right
             scroll_bkg(-1, 0);
             bgMoveDir = 1;
-            corrAsteroid = TRUE;
+            corrBgMove = TRUE;
 
         } else if ((world[1] >= yMax) && !xMove) {  // Bottom limit of screen, move bkg up
             scroll_bkg(0, 1);
             bgMoveDir = 2;
-            corrAsteroid = TRUE;
+            corrBgMove = TRUE;
 
         } else if ((world[1] <= yMin) && !xMove) {  // Top limit of screen, move bkg down
             scroll_bkg(0, -1);
             bgMoveDir = 3;
-            corrAsteroid = TRUE;
+            corrBgMove = TRUE;
 
         } else {
-            corrAsteroid = FALSE;
+            corrBgMove = FALSE;
         }
     }
 }
@@ -734,7 +799,7 @@ void bgMove() {
 void explosion() {
     // Hide the asteroid
     delay(10);
-    hide_sprite(spCountAst);
+    hide_sprite(spAsteroid[currAsteroid]);
 
     CBTFX_PLAY_SFX_05;  // Explosion sound
 
@@ -772,7 +837,6 @@ void resetVariables() {
     numLives = TOTAL_LIVES;
     numAsteroids = 0;
     timeAsteroid = 0;
-    timeAsteroid2 = 0;
     aux = 0;
 }
 
