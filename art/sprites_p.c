@@ -5,8 +5,6 @@
 
 /*
 
- SPRITES_P.C
-
  Sprites palettes.
 
 */

@@ -1,3 +1,9 @@
+/*
+
+ CoffeeBaT-FX (CBT-FX) include file.
+
+*/
+
 #ifndef CBTFX_H_INCLUDE
 #define CBTFX_H_INCLUDE
 

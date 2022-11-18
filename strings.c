@@ -1,7 +1,5 @@
 /*
 
- STRINGS.C
-
  Dialog strings source.
 
 */

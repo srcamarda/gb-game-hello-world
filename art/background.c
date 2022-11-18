@@ -1,7 +1,5 @@
 /*
 
- BACKGROUND.C
-
  Background maps source.
 
 */

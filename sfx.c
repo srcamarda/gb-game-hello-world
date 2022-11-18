@@ -1,3 +1,9 @@
+/*
+
+ SFX source file.
+
+*/
+
 #define CBTFX_PLAY_SFX_00 CBTFX_init(&SFX_00[0])
 #define CBTFX_PLAY_SFX_01 CBTFX_init(&SFX_01[0])
 #define CBTFX_PLAY_SFX_02 CBTFX_init(&SFX_02[0])

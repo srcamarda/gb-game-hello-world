@@ -1,7 +1,5 @@
 /*
 
- BACKGROUND_A.C
-
  Background maps attributes source.
 
 */

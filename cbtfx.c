@@ -1,6 +1,9 @@
 /*
-CoffeeBaT-FX (CBT-FX)
-Very simple sound effect Driver by Coffee Bat
+
+ CoffeeBaT-FX (CBT-FX). Very simple sound effect Driver by Coffee Bat.
+
+ 18-Nov-2022    SrCamarda   hUGEDriver support removed for now
+
 */
 
 #include "cbtfx.h"

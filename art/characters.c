@@ -1,6 +1,8 @@
 #include <gb/gb.h>
 
-/* Two-Dimensional Array with 95 printable ASCII characters
+/*
+
+Two-Dimensional Array with 95 printable ASCII characters.
 This allows a mapping between a *char and a sprite with the offset of 32.
 
 Table looks like following:

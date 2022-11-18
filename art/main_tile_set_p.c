@@ -5,9 +5,7 @@
 
 /*
 
- MAIN_TILE_SET_P.C
-
- Background palettes.
+Main tile palettes.
 
 */
 

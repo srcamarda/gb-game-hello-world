@@ -1,3 +1,11 @@
+/*
+
+ Hello World game. Main game file.
+
+ 18-Nov-2022    SrCamarda   Initial version with change comments
+
+*/
+
 #include <gb/cgb.h>
 #include <gb/gb.h>
 #include <rand.h>
