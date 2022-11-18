@@ -14,7 +14,8 @@
 #include "strings.c"              // Dialog string
 
 // Constants
-#define MAX_ASTEROIDS 8
+#define TOTAL_ASTEROIDS 10
+#define TOTAL_ASTRONAUTS 10
 #define TOTAL_LIVES 5
 
 const int xMax = DEVICE_SCREEN_PX_WIDTH - 4;
@@ -39,6 +40,7 @@ BOOLEAN resetAsteroid = FALSE;
 BOOLEAN corrBgMove = FALSE;
 BOOLEAN collision = FALSE;
 BOOLEAN resetAstronaut = TRUE;
+BOOLEAN keyDown = FALSE;
 
 // Integer vars
 int idxBkgTiles = 72;
@@ -47,15 +49,17 @@ int idxSprites = 18;
 int timeAsteroid = 0;
 
 // Unsigned integer vars
-uint8_t asteroids[2][MAX_ASTEROIDS];
-uint8_t propAsteroid[3][MAX_ASTEROIDS];
+uint8_t asteroids[2][TOTAL_ASTEROIDS];
+uint8_t propAsteroid[3][TOTAL_ASTEROIDS];
+uint8_t astronaut[2];
 uint8_t world[2];
 uint8_t fire[2];
-uint8_t astronaut[2];
 uint8_t numLives = TOTAL_LIVES;
 uint8_t numAsteroids = 0;
+uint8_t maxAsteroids = 6;
+uint8_t numAstronauts = 0;
+uint8_t maxAstronauts = 6;
 uint8_t spriteCount = 0;
-uint8_t aux = 0;
 uint8_t currAsteroid;
 uint8_t currSprite;
 uint8_t bgMoveDir;
@@ -64,10 +68,11 @@ uint8_t randNum2;
 uint8_t spWorld;
 uint8_t spFire;
 uint8_t spExplosion;
-uint8_t spHeart[TOTAL_LIVES];
-uint8_t spAsteroid[MAX_ASTEROIDS];
 uint8_t spAstronaut;
+uint8_t spHeart[TOTAL_LIVES];
+uint8_t spAsteroid[TOTAL_ASTEROIDS];
 uint8_t openDiaLines;
+uint8_t aux = 0;
 
 // Functions
 void init();
@@ -76,6 +81,7 @@ void helloPrep();
 void helloStart();
 void bkgTransition(uint8_t);
 void gameOver();
+void gameWin();
 void checkInput();
 void spriteMove();
 void asteroidControl();
@@ -137,7 +143,7 @@ void init() {
     spriteCount++;
 
     // Set asteroids palette
-    for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
+    for (uint8_t i = 0; i < TOTAL_ASTEROIDS; i++) {
         spAsteroid[i] = spriteCount;
         set_sprite_prop(spriteCount, 3);
         spriteCount++;
@@ -164,7 +170,12 @@ void init() {
     NR51_REG = 0x11;  // Enable the sound channels
     NR50_REG = 0x77;  // Increase the volume to its max
 
-    initrand(sys_time);  // Start randon seed
+    // Set logo screen palette and tiles
+    setBkgPalette(0, 0, FullWidth, FullHeight, CamardaBoy_a);  // Set bkg palette
+    set_bkg_tiles(0, 0, FullWidth, FullHeight, CamardaBoy);    // Set bkg tiles
+    move_bkg(0, 0);                                            // Move background to the 0x 0y position
+
+    delay(3500);
 
     helloPrep();  // Call start screen
 }
@@ -180,11 +191,14 @@ void helloPrep() {
     // Set start screen palette and tiles
     setBkgPalette(0, 0, FullWidth, FullHeight, HelloWorld_a);  // Set bkg palette
     set_bkg_tiles(0, 0, FullWidth, FullHeight, HelloWorld);    // Set bkg tiles
-    move_bkg(0, 0);                                            // Move background to the 0x 0y position
 
-    waitpad(J_START);   // Wait for start button press and do initialization
-    CBTFX_PLAY_SFX_07;  // Starting sound
-    helloStart();       // Call game start sequence
+    waitpad(J_START);  // Wait for start button press and do initialization
+
+    initrand(DIV_REG);  // Start randon seed
+
+    CBTFX_PLAY_SFX_03;  // Starting effect
+
+    helloStart();  // Call game start sequence
 }
 
 // Game start sequence
@@ -200,8 +214,16 @@ void helloStart() {
         // Show dialog lines
         openDiaLines = showDialog(Start_s1, sizeof(Start_s1) / MAX_STRING_SIZE, openDiaLines);
 
+        // If key is pressed, wait for release
+        if (keyDown) {
+            waitpadup();
+            keyDown = FALSE;
+        }
+
         // Wait for A button press
         waitpad(J_A);
+        keyDown = TRUE;
+
         CBTFX_PLAY_SFX_01;  // Click sound
 
         performantDelay(5);
@@ -237,8 +259,16 @@ void helloStart() {
         // Show dialog lines
         openDiaLines = showDialog(Start_s2, sizeof(Start_s2) / MAX_STRING_SIZE, openDiaLines);
 
+        // If key is pressed, wait for release
+        if (keyDown) {
+            waitpadup();
+            keyDown = FALSE;
+        }
+
         // Wait for A button press
         waitpad(J_A);
+        keyDown = TRUE;
+
         CBTFX_PLAY_SFX_01;  // Click sound
 
         performantDelay(5);
@@ -317,7 +347,8 @@ void gameOver() {
     hide_sprite(spFire);
     hide_sprite(spWorld);
     hide_sprite(spAstronaut);
-    for (uint8_t i = 0; i < MAX_ASTEROIDS; i++) {
+
+    for (uint8_t i = 0; i < maxAsteroids; i++) {
         hide_sprite(spAsteroid[i]);
     }
 
@@ -330,8 +361,16 @@ void gameOver() {
         // Show dialog lines
         openDiaLines = showDialog(GameOver_s1, sizeof(GameOver_s1) / MAX_STRING_SIZE, openDiaLines);
 
+        // If key is pressed, wait for release
+        if (keyDown) {
+            waitpadup();
+            keyDown = FALSE;
+        }
+
         // Wait for A button press
         waitpad(J_A);
+        keyDown = TRUE;
+
         CBTFX_PLAY_SFX_01;  // Click sound
 
         performantDelay(5);
@@ -360,12 +399,21 @@ void gameOver() {
         // Show dialog lines
         openDiaLines = showDialog(GameOver_s2, sizeof(GameOver_s2) / MAX_STRING_SIZE, openDiaLines);
 
+        // If key is pressed, wait for release
+        if (keyDown) {
+            waitpadup();
+            keyDown = FALSE;
+        }
+
         if (openDiaLines != 0) {  // Wait for A button press
             waitpad(J_A);
+            keyDown = TRUE;
+
             CBTFX_PLAY_SFX_01;  // Click sound
 
         } else {
             waitpad(J_START);  // Wait for start button press
+            keyDown = TRUE;
         }
 
         performantDelay(5);
@@ -373,6 +421,55 @@ void gameOver() {
     } while (openDiaLines != 0);
 
     HIDE_WIN;
+
+    // Call start screen
+    performantDelay(10);
+    CBTFX_PLAY_SFX_03;
+    helloPrep();
+}
+
+void gameWin() {
+    // Increase number of asteroids for next run
+    if (maxAsteroids < TOTAL_ASTEROIDS) {
+        maxAsteroids++;
+    }
+
+    // Increase number of astronauts for next run
+    if (maxAstronauts < TOTAL_ASTRONAUTS) {
+        maxAstronauts++;
+    }
+
+    // Do some blinking with the sprites
+    for (uint8_t i = 0; i < 6; i++) {
+        performantDelay(5);
+        HIDE_SPRITES;
+        performantDelay(5);
+        SHOW_SPRITES;
+    }
+
+    // Wait and actually hide sprites
+    performantDelay(10);
+    hide_sprite(spFire);
+    hide_sprite(spWorld);
+    hide_sprite(spAstronaut);
+
+    for (uint8_t i = 0; i < maxAsteroids; i++) {
+        hide_sprite(spAsteroid[i]);
+    }
+
+    for (uint8_t i = 0; i < numLives; i++) {
+        hide_sprite(spHeart[i]);
+    }
+
+    performantDelay(10);
+    CBTFX_PLAY_SFX_07;  // Sound effect
+
+    performantDelay(10);
+    move_bkg(0, 0);    // Move background to the 0x 0y position
+    bkgTransition(1);  // Call transition function
+
+    // Reset control variables
+    resetVariables();
 
     // Call start screen
     performantDelay(10);
@@ -480,13 +577,22 @@ void spriteMove() {
 
     if (collision) {
         resetAstronaut = TRUE;
+        numAstronauts++;
+
+        CBTFX_PLAY_SFX_02;  // Sound effect
+
+        // Got all astronauts, win game
+        if (numAstronauts == maxAstronauts) {
+            resetAstronaut = FALSE;
+            gameWin();
+        }
     }
 }
 
 // Control asteroids
 void asteroidControl() {
     if (startAsteroid) {
-        if (numAsteroids < MAX_ASTEROIDS || resetAsteroid) {
+        if (numAsteroids < maxAsteroids || resetAsteroid) {
             // Generate randon numbers
             randNum = rand();
             randNum2 = rand();
@@ -613,8 +719,8 @@ void asteroidControl() {
 
     randNum = rand();
 
-    // Create a anew asteroid
-    if ((timeAsteroid > 300 + randNum) && (numAsteroids < MAX_ASTEROIDS)) {
+    // Create a new asteroid
+    if ((timeAsteroid > 300 + randNum) && (numAsteroids < maxAsteroids)) {
         startAsteroid = TRUE;
         timeAsteroid = 0;
     }
@@ -710,54 +816,64 @@ void asteroidMove() {
 }
 
 void astronautControl() {
-    if (resetAstronaut) {
-        resetAstronaut = FALSE;
+    if (numAstronauts < maxAstronauts) {
+        if (resetAstronaut) {
+            resetAstronaut = FALSE;
 
-        randNum = rand();
-        randNum2 = rand();
+            do {
+                randNum = rand();
+                randNum2 = rand();
 
-        // Determine astronaut X and Y position
-        astronaut[0] = (randNum * uniPxWidth) / 255;
-        astronaut[1] = (randNum2 * uniPxHeight) / 255;
+                // Determine astronaut X and Y position
+                astronaut[0] = (randNum * uniPxWidth) / 255;
+                astronaut[1] = (randNum2 * uniPxHeight) / 255;
 
-        randNum = rand();
-        randNum2 = rand();
+                // Check if astronaut is not on player location
+                collision = collisionCheck(world[0], world[1], 8, 8, astronaut[0], astronaut[1], 8, 8);
 
-        // Determines astronaut tile
-        if (randNum < 128) {
-            set_sprite_tile(spAstronaut, 16);
-        } else {
-            set_sprite_tile(spAstronaut, 17);
+            } while (collision);
+
+            initrand(DIV_REG);
+
+            randNum = rand();
+            randNum2 = rand();
+
+            // Determines astronaut tile
+            if (randNum < 50 || randNum > 200) {
+                set_sprite_tile(spAstronaut, 16);
+            } else {
+                set_sprite_tile(spAstronaut, 17);
+            }
+
+            // Determines astronaut palette
+            if (randNum2 < 20 || randNum2 > 170) {
+                set_sprite_prop(spAstronaut, 5);
+            } else {
+                set_sprite_prop(spAstronaut, 6);
+            }
+
+            // Put astronaut on position
+            move_sprite(spAstronaut, astronaut[0], astronaut[1]);
         }
 
-        // Determines astronaut palette
-        if (randNum2 < 128) {
-            set_sprite_prop(spAstronaut, 5);
-        } else {
-            set_sprite_prop(spAstronaut, 6);
-        }
-
-        // Put astronaut on position
-        move_sprite(spAstronaut, astronaut[0], astronaut[1]);
-    }
-
-    // Corrections to compensate background movement
-    if (!stopBG && corrBgMove) {
-        switch (bgMoveDir) {
-            case 0:  // Background moving to the left
-                astronaut[0]--;
-                break;
-            case 1:  // Background moving to the right
-                astronaut[0]++;
-                break;
-            case 2:  // Background moving to the top
-                astronaut[1]--;
-                break;
-            case 3:  // Background moving to the bottom
-                astronaut[1]++;
-                break;
-            default:
-                break;
+        // Corrections to compensate background movement
+        if (!stopBG && corrBgMove) {
+            switch (bgMoveDir) {
+                case 0:  // Background moving to the left
+                    astronaut[0]--;
+                    break;
+                case 1:  // Background moving to the right
+                    astronaut[0]++;
+                    break;
+                case 2:  // Background moving to the top
+                    astronaut[1]--;
+                    break;
+                case 3:  // Background moving to the bottom
+                    astronaut[1]++;
+                    break;
+                default:
+                    break;
+            }
         }
 
         // Put astronaut on position
