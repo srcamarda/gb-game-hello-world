@@ -39,3 +39,7 @@ const unsigned char Start_s2[][MAX_STRING_SIZE] =
         "humans on earth ",
         "And also all the",
         "astronauts!     "};
+
+const unsigned char Numbers[][MAX_STRING_SIZE] = 
+    {
+        "0123456789      "};

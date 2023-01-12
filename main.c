@@ -3,6 +3,7 @@
  Hello World game. Main game file.
 
  18-Nov-2022    SrCamarda   Initial version with change comments
+ 11-Jan-2023    SrCamarda   Add counter of astronauts saved
 
 */
 
@@ -53,7 +54,7 @@ BOOLEAN keyDown = FALSE;
 // Integer vars
 int idxBkgTiles = 72;
 int idxWinTiles = 9;
-int idxSprites = 18;
+int idxSprites = 19;
 int timeAsteroid = 0;
 
 // Unsigned integer vars
@@ -77,6 +78,8 @@ uint8_t spWorld;
 uint8_t spFire;
 uint8_t spExplosion;
 uint8_t spAstronaut;
+uint8_t spAstronautCount;
+uint8_t spCountBg;
 uint8_t spHeart[TOTAL_LIVES];
 uint8_t spAsteroid[TOTAL_ASTEROIDS];
 uint8_t openDiaLines;
@@ -140,37 +143,49 @@ void init() {
     // Set heart palette and tile
     for (uint8_t i = 0; i < numLives; i++) {
         spHeart[i] = spriteCount;
-        set_sprite_prop(spriteCount, 2);  // Heart - Palette 2
+        set_sprite_prop(spHeart[i], 2);  // Heart - Palette 2
         set_sprite_tile(spHeart[i], 15);  // Set tile
         spriteCount++;
     }
 
     // Set explosion palette
     spExplosion = spriteCount;
-    set_sprite_prop(spriteCount, 4);
+    set_sprite_prop(spExplosion, 4);
     spriteCount++;
 
     // Set asteroids palette
     for (uint8_t i = 0; i < TOTAL_ASTEROIDS; i++) {
         spAsteroid[i] = spriteCount;
-        set_sprite_prop(spriteCount, 3);
+        set_sprite_prop(spAsteroid[i], 3);
         spriteCount++;
     }
 
     // Set world palette and tile
     spWorld = spriteCount;
-    set_sprite_prop(spriteCount, 1);
+    set_sprite_prop(spWorld, 1);
     set_sprite_tile(spWorld, 0);
     spriteCount++;
 
     // Set fire palette
     spFire = spriteCount;
-    set_sprite_prop(spriteCount, 2);
+    set_sprite_prop(spFire, 2);
     spriteCount++;
 
     // Set astronaut var
     spAstronaut = spriteCount;
     spriteCount++;
+
+    // Set astronaut count palette and tile
+    spAstronautCount = spriteCount;
+    set_sprite_data(idxSprites, 1, charSprites[Numbers[0][numAstronauts] - charOffset]);
+    set_sprite_prop(spAstronautCount, 0);
+    set_sprite_tile(spAstronautCount, idxSprites);
+    spriteCount++;
+
+    // Set astronaut count bg palette and tile
+    spCountBg = spriteCount;
+    set_sprite_prop(spCountBg, 7);
+    set_sprite_tile(spCountBg, idxSprites - 1);    
 
     DISPLAY_ON;  // Turn on the display
 
@@ -291,6 +306,10 @@ void helloStart() {
         move_sprite(spHeart[i], aux, 20);
         aux += 10;
     }
+
+    // Place astronaut counter and bg
+    move_sprite(spCountBg, xMax, yMin);
+    move_sprite(spAstronautCount, xMax, yMin); 
 }
 
 // Simple background transitions
@@ -355,6 +374,8 @@ void gameOver() {
     hide_sprite(spFire);
     hide_sprite(spWorld);
     hide_sprite(spAstronaut);
+    hide_sprite(spAstronautCount);
+    hide_sprite(spCountBg);
 
     for (uint8_t i = 0; i < maxAsteroids; i++) {
         hide_sprite(spAsteroid[i]);
@@ -460,6 +481,8 @@ void gameWin() {
     hide_sprite(spFire);
     hide_sprite(spWorld);
     hide_sprite(spAstronaut);
+    hide_sprite(spAstronautCount);
+    hide_sprite(spCountBg);
 
     for (uint8_t i = 0; i < maxAsteroids; i++) {
         hide_sprite(spAsteroid[i]);
@@ -588,6 +611,10 @@ void spriteMove() {
         numAstronauts++;
 
         CBTFX_PLAY_SFX_02;  // Sound effect
+
+        // Update counter sprite
+        set_sprite_data(idxSprites, 1, charSprites[Numbers[0][numAstronauts] - charOffset]);
+        set_sprite_tile(spAstronautCount, idxSprites);
 
         // Got all astronauts, win game
         if (numAstronauts == maxAstronauts) {
@@ -961,7 +988,12 @@ void resetVariables() {
     numLives = TOTAL_LIVES;
     numAsteroids = 0;
     timeAsteroid = 0;
+    numAstronauts = 0;
     aux = 0;
+
+    // Reset astronaut sprite
+    set_sprite_data(idxSprites, 1, charSprites[Numbers[0][numAstronauts] - charOffset]);
+    set_sprite_tile(spAstronautCount, idxSprites);
 }
 
 // Set palette for the background

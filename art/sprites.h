@@ -47,7 +47,7 @@
 #define SpritesCGBPal6c3 15038
 
 /* Gameboy Color palette 7 */
-#define SpritesCGBPal7c0 32767
-#define SpritesCGBPal7c1 25368
-#define SpritesCGBPal7c2 19026
+#define SpritesCGBPal7c0 0
+#define SpritesCGBPal7c1 32767
+#define SpritesCGBPal7c2 22197
 #define SpritesCGBPal7c3 12684
